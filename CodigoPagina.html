@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de LED via ESP32 e Firebase</title>
+    
+    <style>
+        body {
+            background-image: url('https://wallpapers.com/images/hd/classic-blue-circuit-board-v9sqijtzusq0u8hc.jpg');
+            background-size: cover;
+            background-position: center; 
+            background-repeat: no-repeat; 
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center; 
+            align-items: center; 
+            height: 105vh; 
+            margin: 50px; 
+        }
+
+        .content {
+            max-width: 800px; 
+            padding: 20px;
+            box-sizing: border-box; 
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px; 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); 
+        }
+
+        h1, h2 {
+            color: #333;
+        }
+
+        h3 {
+            color: #9c108a;
+        }
+
+        .inline {
+            display: inline;
+        }
+
+        section {
+        display: flex;
+        flex-direction: row; 
+        gap: 20px;
+        justify-content: center; 
+        flex-wrap: wrap; 
+        }
+
+
+        button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        img {
+            max-width: 100%; 
+            height: auto; 
+        }
+
+        ul {
+            text-align: left; 
+        }
+    </style>
+</head>
+
+<body>
+    <div class="content">
+        <h1>Controle de <span class="led-word">LEDs</span> via ESP32 e Firebase</h1>
+        <p class="inline">Desenvolvedor:</p>
+        <h3 class="inline">Sylas</h3>        
+        
+        <section>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <p id="led1State">Carregando...</p>
+                <button id="led1Button" onclick="toggleLED(1)">Ligar</button>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <p id="led2State">Carregando...</p>
+                <button id="led2Button" onclick="toggleLED(2)">Ligar</button>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <p id="led3State">Carregando...</p>
+                <button id="led3Button" onclick="toggleLED(3)">Ligar</button>
+            </div>
+        </section>
+
+        <br><br>
+        <img src="wokwi.png" alt="Projeto no Wokwi" width="800" height="500" style="border: 5px solid rgb(175, 82, 184);">
+        
+        <h2>Descrição do Projeto</h2>
+        <p>Este projeto permite controlar LEDs conectados ao ESP32 através de uma interface web, utilizando Firebase como backend.</p>
+
+        <h2>Passo a Passo</h2>
+        <ol>
+            <li>Monte e configure o circuito com o ESP32 e os LEDs.(Bibliotecas incluídas: FireBase32)</li>
+            <li>Configure o Firebase e conecte o ESP32.(No Projeto está sendo utilizado o Realtime Database)</li>
+            <li>Acesse esta página para ligar e desligar os LEDs.</li>
+        </ol>
+        
+        <h2>Links</h2>
+        <ul>
+            <li><a href="https://firebase.google.com/docs/" target="_blank">Documentação Firebase</a></li>
+            <li><a href="https://wokwi.com/" target="_blank">Wokwi - Simulação de Circuitos</a></li>
+            <li><a href="https://wokwi.com/projects/424798476297304065" target="_blank">Projeto no Wokwi</a></li>
+        </ul>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getDatabase, ref, runTransaction, onValue } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDNhIcF1_umGHVktZhlNTStZpbvD4sL5rA",
+            authDomain: "esp32led-9fa8f.firebaseapp.com",
+            projectId: "esp32led-9fa8f",
+            storageBucket: "esp32led-9fa8f.firebasestorage.app",
+            messagingSenderId: "345815574566",
+            appId: "1:345815574566:web:47e19310afd351af869ee7"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        const ledRefs = {
+            led1: ref(database, "led1/state"),
+            led2: ref(database, "led2/state"),
+            led3: ref(database, "led3/state")
+        };
+
+        function toggleLED(ledId) {
+            const ledRef = ledRefs[`led${ledId}`];
+            runTransaction(ledRef, (currentState) => {
+                return currentState === 1 ? 0 : 1; 
+            });
+        }
+
+        function updateLEDStatus() {
+            Object.keys(ledRefs).forEach((ledId) => {
+                const ledRef = ledRefs[ledId];
+                onValue(ledRef, (snapshot) => {
+                    const status = snapshot.val();  
+                    const ledStatusElement = document.getElementById(`${ledId}State`);
+                    const buttonElement = document.getElementById(`${ledId}Button`);
+
+                    if (status !== null) {
+                        const isOn = status === 1;  
+
+                        ledStatusElement.innerText = `LED ${ledId.slice(-1)} está ${isOn ? "ligado" : "desligado"}`;
+                        buttonElement.innerText = isOn ? "Desligar" : "Ligar";
+                        ledStatusElement.style.color = isOn ? "green" : "red";
+                    }
+                });
+            });
+        }
+
+        window.toggleLED = toggleLED;
+
+        updateLEDStatus();
+    </script>
+
+</body>
+</html>
